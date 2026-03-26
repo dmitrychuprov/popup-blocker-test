@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>KYC Verification — ChainBridge</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #fafafa; }
+    .header { background: #1e293b; color: white; padding: 16px 24px; }
+    .header h1 { font-size: 18px; font-weight: 600; }
+    .header .domain { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+    .content { padding: 24px; max-width: 500px; margin: 0 auto; }
+    .fake-kyc { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+    .fake-kyc h2 { font-size: 16px; margin-bottom: 16px; }
+    .fake-kyc .icon { font-size: 48px; margin-bottom: 12px; }
+    .fake-kyc p { font-size: 14px; color: #666; margin-bottom: 20px; }
+    .steps { text-align: left; margin: 16px 0; }
+    .step { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 14px; }
+    .step .num { background: #3b82f6; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    button { padding: 12px 24px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-complete { background: #22c55e; color: white; margin-top: 16px; }
+    .btn-close { background: #e5e7eb; color: #333; margin-top: 8px; font-size: 13px; }
+    .info { margin-top: 20px; background: #f0f9ff; border-radius: 8px; padding: 12px; font-size: 12px; color: #1e40af; text-align: left; }
+    .info code { background: #dbeafe; padding: 1px 4px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>ChainBridge — Identity Verification</h1>
+  <div class="domain">kyc.chain-bridge.org/verify?session=demo_abc123</div>
+</div>
+
+<div class="content">
+  <div class="fake-kyc">
+    <div class="icon">🛂</div>
+    <h2>Верификация личности</h2>
+    <p>Это имитация страницы ChainBridge.<br>Здесь загрузился бы SumSub WebSDK.</p>
+
+    <div class="steps">
+      <div class="step"><span class="num">1</span> Выберите тип документа</div>
+      <div class="step"><span class="num">2</span> Сфотографируйте паспорт</div>
+      <div class="step"><span class="num">3</span> Сделайте селфи</div>
+      <div class="step"><span class="num">4</span> Дождитесь результата</div>
+    </div>
+
+    <button class="btn-complete" onclick="sendResult('completed')">Имитировать: KYC пройден</button>
+    <br>
+    <button class="btn-close" onclick="sendResult('rejected')">Имитировать: KYC отклонён</button>
+  </div>
+
+  <div class="info">
+    <strong>Что видит SumSub в этом окне:</strong><br><br>
+    <code>location.origin</code> = <strong id="show-origin"></strong><br>
+    <code>document.referrer</code> = <strong id="show-referrer"></strong><br>
+    <code>window.opener</code> = <strong id="show-opener"></strong><br>
+    <code>ancestorOrigins</code> = <strong id="show-ancestors"></strong><br><br>
+    Если все значения пустые или показывают домен ChainBridge — BitBanker скрыт.
+  </div>
+</div>
+
+<script>
+  // Show what SumSub would see
+  document.getElementById('show-origin').textContent = location.origin;
+  document.getElementById('show-referrer').textContent = document.referrer || '(пусто)';
+  document.getElementById('show-opener').textContent = window.opener ? 'есть (но cross-origin — нечитаем)' : 'null';
+
+  try {
+    const ao = location.ancestorOrigins;
+    document.getElementById('show-ancestors').textContent = ao && ao.length > 0
+      ? Array.from(ao).join(', ')
+      : '(пусто — не в iframe)';
+  } catch(e) {
+    document.getElementById('show-ancestors').textContent = '(недоступно)';
+  }
+
+  function sendResult(status) {
+    const result = {
+      type: 'kyc_result',
+      status: status,
+      reviewResult: status === 'completed'
+        ? { reviewAnswer: 'GREEN' }
+        : { reviewAnswer: 'RED', rejectLabels: ['FORGERY'] }
+    };
+
+    if (window.opener) {
+      window.opener.postMessage(result, '*');
+    }
+
+    const countdown = 3;
+    document.querySelector('.fake-kyc h2').textContent =
+      status === 'completed' ? '✅ Верификация пройдена' : '❌ Верификация отклонена';
+    document.querySelector('.fake-kyc p').textContent =
+      `Окно закроется через ${countdown} сек...`;
+
+    // Hide buttons
+    document.querySelectorAll('button').forEach(b => b.style.display = 'none');
+
+    setTimeout(() => window.close(), countdown * 1000);
+  }
+</script>
+
+</body>
+</html>

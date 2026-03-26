@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Popup UX Test — KYC Flow</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+    h1 { font-size: 20px; margin-bottom: 8px; }
+    .subtitle { color: #666; font-size: 14px; margin-bottom: 24px; }
+    .tests { display: flex; flex-direction: column; gap: 16px; max-width: 600px; }
+    .test-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .test-card h2 { font-size: 16px; margin-bottom: 4px; }
+    .test-card .desc { font-size: 13px; color: #666; margin-bottom: 12px; }
+    .test-card code { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    button { padding: 10px 20px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    button:active { transform: scale(0.97); }
+    .btn-green { background: #22c55e; color: white; }
+    .btn-green:hover { background: #16a34a; }
+    .btn-yellow { background: #eab308; color: white; }
+    .btn-yellow:hover { background: #ca8a04; }
+    .btn-red { background: #ef4444; color: white; }
+    .btn-red:hover { background: #dc2626; }
+    .btn-blue { background: #3b82f6; color: white; }
+    .btn-blue:hover { background: #2563eb; }
+    .btn-purple { background: #8b5cf6; color: white; }
+    .btn-purple:hover { background: #7c3aed; }
+    .result { margin-top: 10px; padding: 8px 12px; border-radius: 6px; font-size: 13px; display: none; }
+    .result.ok { display: block; background: #dcfce7; color: #166534; }
+    .result.blocked { display: block; background: #fee2e2; color: #991b1b; }
+    .result.info { display: block; background: #dbeafe; color: #1e40af; }
+    .separator { border-top: 2px solid #e5e7eb; margin: 8px 0; }
+    .log { margin-top: 20px; background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; }
+    .log .time { color: #888; }
+    .log .ok { color: #4ade80; }
+    .log .fail { color: #f87171; }
+  </style>
+</head>
+<body>
+
+<h1>Popup UX Test — имитация KYC Flow</h1>
+<p class="subtitle">Проверяем как браузер реагирует на разные способы открытия popup</p>
+
+<div class="tests">
+
+  <!-- Test 1: Sync -->
+  <div class="test-card">
+    <h2>✅ Тест 1: Синхронный popup</h2>
+    <p class="desc">
+      <code>window.open()</code> сразу по клику. Должен открыться везде.
+    </p>
+    <button class="btn-green" onclick="testSync()">Открыть popup</button>
+    <div id="r1" class="result"></div>
+  </div>
+
+  <!-- Test 2: Async 500ms -->
+  <div class="test-card">
+    <h2>⚠️ Тест 2: Async 500ms (быстрый API)</h2>
+    <p class="desc">
+      <code>await 500ms</code> → <code>window.open()</code>. Имитация быстрого ответа API.
+    </p>
+    <button class="btn-yellow" onclick="testAsync(500, 'r2')">Открыть popup</button>
+    <div id="r2" class="result"></div>
+  </div>
+
+  <!-- Test 3: Async 2s -->
+  <div class="test-card">
+    <h2>⚠️ Тест 3: Async 2 сек (нормальный API)</h2>
+    <p class="desc">
+      <code>await 2000ms</code> → <code>window.open()</code>. Типичная задержка BB → ChainBridge.
+    </p>
+    <button class="btn-yellow" onclick="testAsync(2000, 'r3')">Открыть popup</button>
+    <div id="r3" class="result"></div>
+  </div>
+
+  <!-- Test 4: Async 5s -->
+  <div class="test-card">
+    <h2>🔴 Тест 4: Async 5 сек (медленный API)</h2>
+    <p class="desc">
+      <code>await 5000ms</code> → <code>window.open()</code>. Медленная сеть или холодный старт.
+    </p>
+    <button class="btn-red" onclick="testAsync(5000, 'r4')">Открыть popup</button>
+    <div id="r4" class="result"></div>
+  </div>
+
+  <!-- Test 5: Async 8s -->
+  <div class="test-card">
+    <h2>🔴 Тест 5: Async 8 сек (таймаут)</h2>
+    <p class="desc">
+      <code>await 8000ms</code> → <code>window.open()</code>. Сервер тормозит.
+    </p>
+    <button class="btn-red" onclick="testAsync(8000, 'r5')">Открыть popup</button>
+    <div id="r5" class="result"></div>
+  </div>
+
+  <div class="separator"></div>
+
+  <!-- Test 6: Workaround (open first, then redirect) -->
+  <div class="test-card">
+    <h2>🔧 Тест 6: Workaround — open сначала, URL потом</h2>
+    <p class="desc">
+      <code>window.open('about:blank')</code> сразу → <code>await 3000ms</code> → <code>popup.location = url</code>.
+      Рекомендуемый обход блокировки.
+    </p>
+    <button class="btn-blue" onclick="testWorkaround()">Открыть popup</button>
+    <div id="r6" class="result"></div>
+  </div>
+
+  <div class="separator"></div>
+
+  <!-- Test 7: Redirect (no popup) -->
+  <div class="test-card">
+    <h2>🔄 Тест 7: Redirect (не popup)</h2>
+    <p class="desc">
+      <code>await 3000ms</code> → <code>window.location.href = url</code>.
+      Никогда не блокируется. Страница уходит полностью (нажмите "назад" чтобы вернуться).
+    </p>
+    <button class="btn-purple" onclick="testRedirect()">Redirect</button>
+    <div id="r7" class="result"></div>
+  </div>
+
+</div>
+
+<div class="log" id="log"></div>
+
+<script>
+const POPUP_URL = 'popup_target.html';
+const POPUP_FEATURES = 'width=600,height=750,scrollbars=yes,resizable=yes';
+
+function log(msg, type = '') {
+  const el = document.getElementById('log');
+  const time = new Date().toLocaleTimeString();
+  const cls = type === 'ok' ? 'ok' : type === 'fail' ? 'fail' : '';
+  el.innerHTML += `<span class="time">[${time}]</span> <span class="${cls}">${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function showResult(id, ok) {
+  const el = document.getElementById(id);
+  if (ok) {
+    el.className = 'result ok';
+    el.textContent = '✅ Popup открылся';
+  } else {
+    el.className = 'result blocked';
+    el.textContent = '🚫 Popup заблокирован браузером';
+  }
+}
+
+function tryOpen(url, features) {
+  const w = window.open(url, '_blank', features);
+  const ok = w && !w.closed;
+  return { window: w, ok };
+}
+
+// Test 1: Synchronous
+function testSync() {
+  log('Тест 1: синхронный window.open()...');
+  const { ok } = tryOpen(POPUP_URL, POPUP_FEATURES);
+  log(ok ? 'Popup открыт ✓' : 'Popup ЗАБЛОКИРОВАН ✗', ok ? 'ok' : 'fail');
+  showResult('r1', ok);
+}
+
+// Test 2-5: Async with delay
+async function testAsync(delay, resultId) {
+  log(`Тест: async ${delay}ms → window.open()...`);
+  document.getElementById(resultId).className = 'result info';
+  document.getElementById(resultId).style.display = 'block';
+  document.getElementById(resultId).textContent = `⏳ Ждём ${delay}ms (имитация API)...`;
+
+  await new Promise(r => setTimeout(r, delay));
+
+  const { ok } = tryOpen(POPUP_URL, POPUP_FEATURES);
+  log(ok ? `Popup открыт после ${delay}ms ✓` : `Popup ЗАБЛОКИРОВАН после ${delay}ms ✗`, ok ? 'ok' : 'fail');
+  showResult(resultId, ok);
+}
+
+// Test 6: Workaround
+async function testWorkaround() {
+  log('Тест 6: workaround — open(blank) сразу, URL после await...');
+  const w = window.open('about:blank', '_blank', POPUP_FEATURES);
+  const opened = w && !w.closed;
+
+  if (!opened) {
+    log('Даже blank popup ЗАБЛОКИРОВАН ✗', 'fail');
+    showResult('r6', false);
+    return;
+  }
+
+  w.document.write('<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666"><p>Загрузка...</p></body></html>');
+
+  document.getElementById('r6').className = 'result info';
+  document.getElementById('r6').style.display = 'block';
+  document.getElementById('r6').textContent = '⏳ Popup открыт, ждём URL (3 сек)...';
+
+  await new Promise(r => setTimeout(r, 3000));
+
+  w.location.href = POPUP_URL;
+  log('URL подставлен в popup ✓', 'ok');
+  showResult('r6', true);
+}
+
+// Test 7: Redirect
+async function testRedirect() {
+  log('Тест 7: redirect после 3 сек...');
+  document.getElementById('r7').className = 'result info';
+  document.getElementById('r7').style.display = 'block';
+  document.getElementById('r7').textContent = '⏳ Ждём 3 сек (имитация API)...';
+
+  await new Promise(r => setTimeout(r, 3000));
+
+  log('Redirect → popup_target.html', 'ok');
+  window.location.href = POPUP_URL;
+}
+
+log('Готово к тестированию. Нажмите кнопки по порядку.');
+log('Браузер: ' + navigator.userAgent.split(' ').slice(-2).join(' '));
+</script>
+
+</body>
+</html>
