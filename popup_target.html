@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <title>KYC Verification — ChainBridge</title>
+  <title>Verification — Partner Service</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #fafafa; }
@@ -29,15 +29,15 @@
 <body>
 
 <div class="header">
-  <h1>ChainBridge — Identity Verification</h1>
-  <div class="domain">kyc.chain-bridge.org/verify?session=demo_abc123</div>
+  <h1>Partner — Identity Verification</h1>
+  <div class="domain">kyc.partner-service.org/verify?session=demo_abc123</div>
 </div>
 
 <div class="content">
   <div class="fake-kyc">
     <div class="icon">🛂</div>
     <h2>Верификация личности</h2>
-    <p>Это имитация страницы ChainBridge.<br>Здесь загрузился бы SumSub WebSDK.</p>
+    <p>Это имитация hosted-страницы партнёра.<br>Здесь загрузился бы виджет верификации.</p>
 
     <div class="steps">
       <div class="step"><span class="num">1</span> Выберите тип документа</div>
@@ -52,12 +52,12 @@
   </div>
 
   <div class="info">
-    <strong>Что видит SumSub в этом окне:</strong><br><br>
+    <strong>Что видит SDK в этом окне:</strong><br><br>
     <code>location.origin</code> = <strong id="show-origin"></strong><br>
     <code>document.referrer</code> = <strong id="show-referrer"></strong><br>
     <code>window.opener</code> = <strong id="show-opener"></strong><br>
     <code>ancestorOrigins</code> = <strong id="show-ancestors"></strong><br><br>
-    Если все значения пустые или показывают домен ChainBridge — BitBanker скрыт.
+    Если все значения пустые или показывают домен партнёра — основной сайт скрыт.
   </div>
 </div>
 
