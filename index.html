@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="referrer" content="no-referrer">
   <title>Popup Blocker Test</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,40 +38,42 @@
 const POPUP_URL = 'https://dc-sp.github.io/kyc-verify/';
 const API_DELAY = 2000;
 
-let popupWindow = null;
-
 async function startVerification() {
   const btn = document.getElementById('btn');
   const status = document.getElementById('status');
   const tech = document.getElementById('tech');
 
   btn.disabled = true;
-  status.className = 'status waiting';
-  status.textContent = 'Подготовка сессии...';
 
-  // Имитация async API-запроса (backend → gateway, ~2 сек)
-  await new Promise(r => setTimeout(r, API_DELAY));
-
-  // Открываем popup ПОСЛЕ async — именно так работает реальный код
+  // Открываем blank СРАЗУ по клику — не блокируется браузером
   const left = Math.round(window.screenX + (window.outerWidth - 600) / 2);
   const top = Math.round(window.screenY + (window.outerHeight - 750) / 2);
-  popupWindow = window.open(
-    POPUP_URL,
-    'verification',
+  const popupWindow = window.open('about:blank', 'verification',
     `width=600,height=750,left=${left},top=${top},scrollbars=yes,resizable=yes`
   );
 
   if (!popupWindow || popupWindow.closed) {
     status.className = 'status blocked';
     status.textContent = '🚫 Браузер заблокировал всплывающее окно. Разрешите popup для этого сайта и повторите.';
-    tech.textContent = `window.open() вернул null после await ${API_DELAY}ms. User activation expired.`;
     btn.disabled = false;
     return;
   }
 
+  // Показываем загрузку в popup пока ждём API
+  popupWindow.document.write('<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666"><p>Загрузка верификации...</p></body></html>');
+
+  status.className = 'status waiting';
+  status.textContent = 'Подготовка сессии...';
+
+  // Имитация async API-запроса (backend → gateway, ~2 сек)
+  await new Promise(r => setTimeout(r, API_DELAY));
+
+  // Подменяем URL после получения ответа от API
+  popupWindow.location.href = POPUP_URL;
+
   status.className = 'status progress';
   status.textContent = '⏳ Верификация в процессе. Не закрывайте окно.';
-  tech.textContent = `Popup открылся после ${API_DELAY}ms async задержки.`;
+  tech.textContent = 'window.open(blank) сразу по клику → URL подставлен после async.';
 
   // Слушаем postMessage из popup
   window.addEventListener('message', function handler(event) {
